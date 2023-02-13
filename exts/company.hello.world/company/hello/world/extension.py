@@ -21,6 +21,20 @@ from omni.physx.scripts import utils
 
 WIDTH = 0.02
 PC_PATH = "/World/pc"
+created_prims = 0
+add_prims_tojson = []
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 def create_pointcloud(pc, points_path, width):
@@ -95,7 +109,7 @@ class prim:
 
 
 
-class CompanyHelloWorldExtension(omni.ext.IExt):
+class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
 
 
     
@@ -104,6 +118,7 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
         super().__init__()
         self.file_browser_menu = None
         self.pc = None
+        self.frame.set_build_fn(self._build_window)
 
 
     
@@ -122,6 +137,9 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
         print("[company.hello.world] company hello world startup")
 
         
+
+
+
 
 
         
@@ -280,25 +298,59 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
                 
 
                 def create_prim(button):
-                    prim_name = button.text
-                    print(prim_name)
-                    # # Create a cube mesh in the stage
-                    stage = omni.usd.get_context().get_stage()
-                    result, path = omni.kit.commands.execute("CreateMeshPrimCommand", prim_type=prim_name)
+                    global created_prims
+                    if created_prims==0:
+                        prim_name = button.text
+                        print(prim_name)
+                        # # Create a cube mesh in the stage
+                        stage = omni.usd.get_context().get_stage()
+                        result, path = omni.kit.commands.execute("CreateMeshPrimCommand", prim_type=prim_name)
+                        created_prims = path
+                    else:
+                        print("One mesh was created!")
+
+
+                def undo_prim():
+                    global created_prims
+                    if created_prims!=0:
+                        stage = omni.usd.get_context().get_stage()
+                        prim = stage.DefinePrim(created_prims)
+                        if stage.RemovePrim(created_prims):
+                            print('prim removed')
+                            created_prims = 0
+
+
+                
+                def place_prim():
+                    global created_prims
+                    global add_prims_tojson
+                    if created_prims!=0:
+                        add_prims_tojson.append(created_prims)
+                        created_prims =  0
+                        print(add_prims_tojson)
+                        print(len(add_prims_tojson))
+                        
+                
+
+                def reset_list():
+                    # Empty List
+                    add_prims_tojson.clear()
+                    print(add_prims_tojson)
+                    self.frame.rebuild()
                     
                     
 
 
 
 
-                with ui.CollapsableFrame("Load PC"):
+                with ui.CollapsableFrame("Load PC", height=0):
                     with ui.HStack(height=10):
                         self.path_field = ui.StringField()
                         ui.Button("Browse", clicked_fn=open_file_dialog)
                         ui.Button("Load", clicked_fn=load_pointcloud)
 
 
-                with ui.CollapsableFrame("Place Object"):
+                with ui.CollapsableFrame("Place Object", height=0):
                     with ui.HStack():
                         left_frame= ui.ScrollingFrame(
                         height=250, width=200,
@@ -306,7 +358,7 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
                         vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
                         )
                         with left_frame:
-                            with ui.VStack(height=0):
+                            with ui.VStack():
                                 button = ui.Button("Cube")
                                 button.set_clicked_fn(lambda b=button: create_prim(b))
 
@@ -339,30 +391,47 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
 
                                 button = ui.Button("Test")
                                 button.set_clicked_fn(lambda b=button: create_prim(b))
+                        with ui.VStack(width=200):
+                            ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=place_prim)
+                            ui.Label("Select just ONE object")
+                            ui.Label("Place it by clicking DONE")
+                            ui.Label("Roll Back using UNDO")
+                        ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=undo_prim)
+                        ui.Button("Reset", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=reset_list)
 
-                        
-                        ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(200))
-                        ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(200))
+
 
                 with ui.HStack():         
-                    ui.Button("getBounding", clicked_fn=compute_path_bbox)
-                    ui.Button("get_transfRot", clicked_fn=get_transfRot)
-                    ui.Button("write_json", clicked_fn=write_json)
-                    ui.Button("get_name", clicked_fn=get_name)
+                    # ui.Button("getBounding", clicked_fn=compute_path_bbox)
+                    # ui.Button("get_transfRot", clicked_fn=get_transfRot)
+                    # ui.Button("write_json", clicked_fn=write_json)
+                    # ui.Button("get_name", clicked_fn=get_name)
+                    
+                    with ui.Frame(height=260):
+                        with ui.ScrollingFrame( height=250, width=200,
+                        horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF, 
+                        vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
+                        ):
+                            with ui.VStack(column_width=80, row_height=100):
+                                for i in range(10):
+                                    with ui.VStack():
+                                        ui.Label(f"{i}", style={"margin": 5})
+
+
 
                     
                     
                     
-
-                    
-
                     
 
 
+                    
 
 
-                with ui.Frame(height=12):
-                    self.point_count = ui.Label("")
+
+
+                
+                    
 
 
 
