@@ -18,15 +18,45 @@ from omni.physx.scripts import utils
 
 
 
-
 WIDTH = 0.02
 PC_PATH = "/World/pc"
 created_prims = 0
-add_prims_tojson = []
+add_prims_tojson = [] # list of prim paths to save in bb
+asset_paths = [] # list to check occurence asset path of same asset
 
 
 
 
+
+
+
+
+def add_ref_to_scene(ref_scene_path: str, ref_path_in_scene: str):
+    from pxr import UsdGeom
+    from scipy.spatial.transform import Rotation as R
+
+
+
+    stage = omni.usd.get_context().get_stage()
+    ref_prim = stage.OverridePrim(ref_path_in_scene)
+    ref_prim.GetReferences().AddReference(ref_scene_path)
+    # Applying translation
+    UsdGeom.XformCommonAPI(ref_prim).CreateXformOps()
+    UsdGeom.XformCommonAPI(ref_prim).SetTranslate((0, 0, 0))
+    UsdGeom.XformCommonAPI(ref_prim).SetRotate((0, 0, 0))
+    UsdGeom.XformCommonAPI(ref_prim).SetScale((1, 1, 1))
+
+
+
+class AIPEFPoseEstimationMenu:
+    def __init__(self, get_pc, set_pc, get_bb_list):
+        self.path_field = None
+        self.asset_label = None
+        self.elements = None
+        self.reference_models = None
+        self.get_pc = get_pc
+        self.set_pc = set_pc
+        self.get_bb_list = get_bb_list
 
 
 
@@ -109,7 +139,7 @@ class prim:
 
 
 
-class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
+class CompanyHelloWorldExtension(omni.ext.IExt):
 
 
     
@@ -117,15 +147,25 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
     def __init__(self):
         super().__init__()
         self.file_browser_menu = None
-        self.pc = None
-        self.frame.set_build_fn(self._build_window)
-
+        self.pc = None        
+        self.pose_estimation_menu = None
+        self.elements = None
+        self.bb_list = None
 
     
     
     def set_pc(self, pc):
         self.pc = pc
         create_pointcloud(pc, PC_PATH, WIDTH)
+
+    def get_pc(self):
+        return self.pc
+
+    def set_bb_list(self, bb_list):
+        self.bb_list = bb_list
+
+    def get_bb_list(self):
+        return self.bb_list
 
     
 
@@ -146,6 +186,7 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
         
 
         self.file_browser_menu = AIPEFileBrowserMenu(self.set_pc)
+        self.pose_estimation_menu = AIPEFPoseEstimationMenu(self.get_pc, self.set_pc, self.get_bb_list)
 
         #  self._window = ui.Window("AIPE", width=600, height=800)
         #  with self._window.frame:
@@ -165,20 +206,20 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
 
                 
 
-                def get_name():
+                def get_name(prim_path):
                     
                     stage = omni.usd.get_context().get_stage()
-                    prim_path = Sdf.Path("/World/Cone")
+                    prim_path = Sdf.Path(prim_path)
                     prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                     xform = UsdGeom.Xformable(prim)
                     # For property name
                     name = prim.GetName()
                     return name
 
-                def get_transfRot():
+                def get_transfRot(prim_path):
                     
                     stage = omni.usd.get_context().get_stage()
-                    prim_path = Sdf.Path("/World/Cone")
+                    prim_path = Sdf.Path(prim_path)
                     prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                     xform = UsdGeom.Xformable(prim)
                     # For property translation
@@ -193,43 +234,16 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
                     
                 # get bounding box of a prim using prim_path
                 # to get width, height and depth
-                def compute_path_bbox():
+                def compute_path_bbox(prim_path):
 
-                    a = omni.usd.get_context().compute_path_world_bounding_box("/World/Cone")
+                    a = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
                     width = a[1][0] - a [0][0]
                     height = a[1][1] - a[0][1]
                     depth = a[1][2] - a[0][2]
                     return width, height, depth
 
 
-                # Write bounding box into a json file
-                def write_json():
-                    
-                    name = get_name()
-                    translate, rotation = get_transfRot()
-                    width, height, depth = compute_path_bbox()
-
-                    center_x = translate[0]
-                    center_y = translate[1]
-                    center_z = translate[2]
-
-                    rot_x = rotation[0]
-                    rot_y = rotation[1]
-                    rot_z = rotation[2]
-
-                    data = prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
-                    # creating list
-                    list_of_prims = []
-                    
-                    # appending instances to list
-                    list_of_prims.append(data.__dict__)
-                    list_of_prims.append(data.__dict__)
-                    
-                    print(type(list_of_prims))
-                    with open('json_data.json', 'w') as json_file:
-                         json.dump(list_of_prims, json_file, 
-                         indent=4,  
-                         separators=(',',': '))
+                
 
 
 
@@ -288,6 +302,71 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
 
 
 
+                # For JSON Files
+
+                def open_file_dialog_json():
+                    item_filters = [".json"]
+                    item_filter_options_description = ["JSON Files (*.json)"]
+
+                    dialog = FilePickerDialog(
+                        "Demo Filepicker",
+                        apply_button_label="Open",
+                        click_apply_handler=lambda filename, dirname: on_click_open_json(dialog, filename, dirname, path_field_json),
+                        item_filter_options=item_filter_options_description,
+                        item_filter_fn=lambda item: on_filter_item(dialog, item, item_filters),
+                        options_pane_build_fn=options_pane_build_fn,
+                    )
+
+                    dialog.show("/home/anthony/PycharmProjects/AIPipeline/files/datasets/real")
+
+
+                def on_click_open_json(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
+                    dialog.hide()
+                    dirname = dirname.strip()
+                    if dirname and not dirname.endswith("/"):
+                        dirname += "/"
+                    fullpath = f"{dirname}{filename}"
+                    path_field_json.model.set_value(fullpath)
+
+
+
+                # Write bounding box into a json file
+                def save_bb():
+                    # creating list to save json objects
+                    list_of_prims = []
+                    # Iterate list of prim paths ---- add_prims_tojson
+
+                    for p in add_prims_tojson:
+
+                    
+                        name = get_name(p)
+                        translate, rotation = get_transfRot(p)
+                        width, height, depth = compute_path_bbox(p)
+
+                        center_x = translate[0]
+                        center_y = translate[1]
+                        center_z = translate[2]
+
+                        rot_x = rotation[0]
+                        rot_y = rotation[1]
+                        rot_z = rotation[2]
+
+                        data = prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
+                        #     appending instances to list
+                        list_of_prims.append(data.__dict__)
+
+                    
+                    with open(path_field_json.model.get_value_as_string(), 'w') as json_file:
+                          json.dump(list_of_prims, json_file, 
+                          indent=4,  
+                          separators=(',',': '))
+
+
+
+
+                    #######################
+
+
 
                 def load_pointcloud():
                     ply_pc = o3d.io.read_point_cloud(self.path_field.model.get_value_as_string())
@@ -300,12 +379,28 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
                 def create_prim(button):
                     global created_prims
                     if created_prims==0:
+                        create_file()
                         prim_name = button.text
                         print(prim_name)
-                        # # Create a cube mesh in the stage
+                        # Check if prim already exist
                         stage = omni.usd.get_context().get_stage()
-                        result, path = omni.kit.commands.execute("CreateMeshPrimCommand", prim_type=prim_name)
-                        created_prims = path
+                        # Access group
+                        prim_path = Sdf.Path("/World/Added_Prims")
+                        prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
+                        # set asset_path of the prim to be created
+                        asset_path = f"/home/johnny/Downloads/usdfiles/{prim_name}.usd"
+                        # count occurence of object if exists
+                        count = 0
+                        for x in asset_paths:
+                            if asset_path == x:
+                                count = count + 1
+
+                        ref_name = f"/World/Added_Prims/{prim_name}_{count}"
+                        add_ref_to_scene(asset_path, ref_name)
+                        
+                        created_prims = ref_name
+                        # Add path to the list of assets
+                        asset_paths.append(asset_path)
                     else:
                         print("One mesh was created!")
 
@@ -318,6 +413,7 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
                         if stage.RemovePrim(created_prims):
                             print('prim removed')
                             created_prims = 0
+                            del asset_paths[-1]
 
 
                 
@@ -333,12 +429,39 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
                 
 
                 def reset_list():
+                    # Delete prims from scene
+                    stage = omni.usd.get_context().get_stage()
+                    for x in add_prims_tojson:
+                        stage.RemovePrim(x)
                     # Empty List
                     add_prims_tojson.clear()
                     print(add_prims_tojson)
-                    self.frame.rebuild()
                     
                     
+
+
+
+
+
+
+
+
+                def create_file():
+                    omni.kit.commands.execute('CreatePrimWithDefaultXform',
+                    prim_type='Added_Prims',
+                    prim_path=None,
+                    attributes={},
+                    select_new_prim=True)
+                    return "done"
+
+
+                def print_all_children_names():
+                    stage = omni.usd.get_context().get_stage()
+
+                    prim_path = Sdf.Path("/World/Added_Prims")
+                    prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
+                    for child_prim in prim.GetAllChildren():
+                        print(child_prim.GetReferences().GetPrim())
 
 
 
@@ -407,20 +530,16 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
                     # ui.Button("write_json", clicked_fn=write_json)
                     # ui.Button("get_name", clicked_fn=get_name)
                     
-                    with ui.Frame(height=260):
-                        with ui.ScrollingFrame( height=250, width=200,
-                        horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF, 
-                        vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
-                        ):
-                            with ui.VStack(column_width=80, row_height=100):
-                                for i in range(10):
-                                    with ui.VStack():
-                                        ui.Label(f"{i}", style={"margin": 5})
-
-
-
                     
-                    
+
+
+                    path_field_json = ui.StringField(width=ui.Pixel(200), height=ui.Pixel(10))
+                    ui.Button("Browse", width=ui.Pixel(200), height=ui.Pixel(10), clicked_fn=open_file_dialog_json)
+                    ui.Button("Save BB", width=ui.Pixel(200), height=ui.Pixel(10), clicked_fn=save_bb)
+
+                    ui.Button("create_file", clicked_fn=create_file)
+                    ui.Button("print_all_children_names", clicked_fn=print_all_children_names)
+                    ui.Button("get_transfRot", clicked_fn=get_transfRot)
                     
                     
 
@@ -439,3 +558,9 @@ class CompanyHelloWorldExtension(omni.ext.IExt, ui.Window):
 
     def on_shutdown(self):
         print("[company.hello.world] company hello world shutdown")
+
+
+
+
+
+
