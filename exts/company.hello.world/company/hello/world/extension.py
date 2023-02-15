@@ -14,6 +14,7 @@ import omni.kit.commands
 from pxr import UsdGeom
 import omni
 from omni.physx.scripts import utils
+import os
 
 
 
@@ -198,7 +199,7 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
         
     
 
-        self._window = ui.Window("My Window", width=300, height=300)
+        self._window = ui.Window("My Window", width=700, height=700)
         with self._window.frame:
             with ui.VStack():
                 
@@ -332,40 +333,64 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
 
                 # Write bounding box into a json file
                 def save_bb():
-                    # creating list to save json objects
-                    list_of_prims = []
-                    # Iterate list of prim paths ---- add_prims_tojson
+                    file_path  = path_field_json.model.get_value_as_string()
+                    if file_path == "":
+                        validation_saving.text = "Browse the json file first!"
+                    else:
+                        check_assets_exist()
+                        # creating list to save json objects
+                        list_of_prims = []
+                        # Iterate list of prim paths ---- add_prims_tojson
 
-                    for p in add_prims_tojson:
+                        for p in add_prims_tojson:
 
-                    
-                        name = get_name(p)
-                        translate, rotation = get_transfRot(p)
-                        width, height, depth = compute_path_bbox(p)
+                        
+                            name = get_name(p)
+                            translate, rotation = get_transfRot(p)
+                            width, height, depth = compute_path_bbox(p)
 
-                        center_x = translate[0]
-                        center_y = translate[1]
-                        center_z = translate[2]
+                            center_x = translate[0]
+                            center_y = translate[1]
+                            center_z = translate[2]
 
-                        rot_x = rotation[0]
-                        rot_y = rotation[1]
-                        rot_z = rotation[2]
+                            rot_x = rotation[0]
+                            rot_y = rotation[1]
+                            rot_z = rotation[2]
 
-                        data = prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
-                        #     appending instances to list
-                        list_of_prims.append(data.__dict__)
+                            data = prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
+                            #     appending instances to list
+                            list_of_prims.append(data.__dict__)
 
-                    
-                    with open(path_field_json.model.get_value_as_string(), 'w') as json_file:
-                          json.dump(list_of_prims, json_file, 
-                          indent=4,  
-                          separators=(',',': '))
+                        
+                        with open(file_path, 'w') as json_file:
+                            json.dump(list_of_prims, json_file, 
+                            indent=4,  
+                            separators=(',',': '))
+
+                        validation_saving.text = "Data Saved!"
 
 
 
 
                     #######################
 
+
+
+                
+                
+                def test1():
+
+                    
+                    directory_path  = "/home/johnny/Downloads"
+                    
+                    
+                    
+                    for x in os.listdir(directory_path):
+                        if x.endswith(".usd"):
+                            # Prints only text file present in My Folder
+                            objects.append(x.partition('.')[0])
+
+                    return objects
 
 
                 def load_pointcloud():
@@ -378,14 +403,18 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
 
                 def create_prim(button):
                     global created_prims
+                    validation_saving.text = ""
+                    
                     if created_prims==0:
-                        create_file()
+                        if len(add_prims_tojson) == 0:
+                            create_file()
+                        # create_file()
                         prim_name = button.text
                         print(prim_name)
                         # Check if prim already exist
                         stage = omni.usd.get_context().get_stage()
                         # Access group
-                        prim_path = Sdf.Path("/World/Added_Prims")
+                        prim_path = Sdf.Path("/World/Scope")
                         prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                         # set asset_path of the prim to be created
                         asset_path = f"/home/johnny/Downloads/usdfiles/{prim_name}.usd"
@@ -395,18 +424,42 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
                             if asset_path == x:
                                 count = count + 1
 
-                        ref_name = f"/World/Added_Prims/{prim_name}_{count}"
+                        ref_name = f"/World/Scope/{prim_name}_{count}"
                         add_ref_to_scene(asset_path, ref_name)
                         
                         created_prims = ref_name
                         # Add path to the list of assets
                         asset_paths.append(asset_path)
                     else:
-                        print("One mesh was created!")
+                        validation.text = "One Object already created"
+                        validation_saving.text = ""
+
+
+                def check_assets_exist():
+                    stage = omni.usd.get_context().get_stage()
+                    i = 0
+                    for p in  add_prims_tojson:
+                        prim_path = Sdf.Path(p)
+                        prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
+                        if prim.IsValid():
+                            print("")
+                        else:
+                             # Delete also from asset list
+                            # prim_name = get_name(p)
+                            # strValue = "The Last-Warrior"
+                            # ch = '-'
+                            # # Remove all characters after the character '-' from string
+                            # before, sep, after = strValue.partition('-')
+                            # strValue = before
+                            # asset_path = f"/home/johnny/Downloads/usdfiles/{prim_name}.usd"
+
+                            add_prims_tojson.remove(p)
+                           
 
 
                 def undo_prim():
                     global created_prims
+                    validation_saving.text = ""
                     if created_prims!=0:
                         stage = omni.usd.get_context().get_stage()
                         prim = stage.DefinePrim(created_prims)
@@ -416,20 +469,33 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
                             del asset_paths[-1]
 
 
+
                 
                 def place_prim():
                     global created_prims
                     global add_prims_tojson
+                    check_assets_exist()
+                    validation_saving.text = ""
                     if created_prims!=0:
+                        validation.text = ""
                         add_prims_tojson.append(created_prims)
+                        omni.kit.commands.execute('LockSpecs',
+                        spec_paths=[Sdf.Path(created_prims)],
+                        hierarchy=False)
+
                         created_prims =  0
-                        print(add_prims_tojson)
-                        print(len(add_prims_tojson))
+
+                    else:
+                        validation.text = "Select an object!"
                         
-                
+                        
+                        
+                    print(add_prims_tojson)
+                    print(len(add_prims_tojson))
 
                 def reset_list():
                     # Delete prims from scene
+                    validation_saving.text = ""
                     stage = omni.usd.get_context().get_stage()
                     for x in add_prims_tojson:
                         stage.RemovePrim(x)
@@ -446,9 +512,11 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
 
 
 
+
                 def create_file():
+                    
                     omni.kit.commands.execute('CreatePrimWithDefaultXform',
-                    prim_type='Added_Prims',
+                    prim_type='Scope',
                     prim_path=None,
                     attributes={},
                     select_new_prim=True)
@@ -458,7 +526,7 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
                 def print_all_children_names():
                     stage = omni.usd.get_context().get_stage()
 
-                    prim_path = Sdf.Path("/World/Added_Prims")
+                    prim_path = Sdf.Path("/World/Scope")
                     prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                     for child_prim in prim.GetAllChildren():
                         print(child_prim.GetReferences().GetPrim())
@@ -480,84 +548,52 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
                         horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
                         vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
                         )
+                    
+
+                        objects  = []
+                        
+                        objects_in_dir = test1()
+                                 
+
+
+
                         with left_frame:
                             with ui.VStack():
-                                button = ui.Button("Cube")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
 
-                                button = ui.Button("Cone")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Plane")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
-                                button.set_clicked_fn(lambda b=button: create_prim(b))
-
-                                button = ui.Button("Test")
+                                for but in objects_in_dir:
+                                    button = ui.Button(but)
+                                    button.set_clicked_fn(lambda b=button: create_prim(b))
+                                
                                 button.set_clicked_fn(lambda b=button: create_prim(b))
                         with ui.VStack(width=200):
                             ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=place_prim)
-                            ui.Label("Select just ONE object")
-                            ui.Label("Place it by clicking DONE")
-                            ui.Label("Roll Back using UNDO")
+                            validation = ui.Label("")
+
                         ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=undo_prim)
                         ui.Button("Reset", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=reset_list)
 
 
-
-                with ui.HStack():         
+                with ui.VStack():         
                     # ui.Button("getBounding", clicked_fn=compute_path_bbox)
                     # ui.Button("get_transfRot", clicked_fn=get_transfRot)
                     # ui.Button("write_json", clicked_fn=write_json)
                     # ui.Button("get_name", clicked_fn=get_name)
                     
                     
-
-
-                    path_field_json = ui.StringField(width=ui.Pixel(200), height=ui.Pixel(10))
-                    ui.Button("Browse", width=ui.Pixel(200), height=ui.Pixel(10), clicked_fn=open_file_dialog_json)
-                    ui.Button("Save BB", width=ui.Pixel(200), height=ui.Pixel(10), clicked_fn=save_bb)
-
-                    ui.Button("create_file", clicked_fn=create_file)
-                    ui.Button("print_all_children_names", clicked_fn=print_all_children_names)
-                    ui.Button("get_transfRot", clicked_fn=get_transfRot)
-                    
-                    
-
+                    with ui.HStack(width=330, height=60):  
+                        ui.Label("Save json file in: ")
+                        path_field_json = ui.StringField()
+                        ui.Button("Save BB", height=ui.Pixel(60), clicked_fn=save_bb)
+                        validation_saving = ui.Label("")
+                    ui.Button("Browse", width=ui.Pixel(251), height=ui.Pixel(10), clicked_fn=open_file_dialog_json)
 
                     
-
-
-
-
-                
-                    
-
-
-
                     
 
     def on_shutdown(self):
         print("[company.hello.world] company hello world shutdown")
+
+
 
 
 
