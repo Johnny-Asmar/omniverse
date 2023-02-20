@@ -1,4 +1,4 @@
-class prim:
+class Prim:
   def __init__(self, name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth):
 
     self.name = name

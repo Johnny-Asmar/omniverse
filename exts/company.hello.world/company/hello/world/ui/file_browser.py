@@ -5,15 +5,12 @@ import open3d as o3d
 from typing import List
 import os
 
-
 class AIPEFileBrowserMenu:
     def __init__(self, set_pc):
         self.path_field = None
         self.point_count = None
         self.pc = None
         self.set_pc = set_pc
-
-    
 
     def build_ui(self):
 
@@ -45,7 +42,6 @@ class AIPEFileBrowserMenu:
                 # Show All Files (*)
                 return True
 
-
         def open_file_dialog():
             item_filters = [".ply"]
             item_filter_options_description = ["PLY Files (*.ply)"]
@@ -61,17 +57,12 @@ class AIPEFileBrowserMenu:
 
             dialog.show("/home/anthony/PycharmProjects/AIPipeline/files/datasets/real")
 
-
-
         def load_pointcloud():
             ply_pc = o3d.io.read_point_cloud(self.path_field.model.get_value_as_string())
             self.pc = ply_pc
             self.point_count.text = f"{len(ply_pc.points): ,} loaded from the pointcloud!"
             self.set_pc(ply_pc)
-
             
-
-        
 
         with ui.VStack():
             with ui.HStack(height=0):

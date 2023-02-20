@@ -5,23 +5,18 @@ import omni.ui as ui
 import os
 import omni
 from pxr import Sdf, Usd, UsdGeom, Gf
-from company.hello.world.classes.prim import prim
+from company.hello.world.classes.prim import Prim
 import json
+from builtins import max
 
-
-created_prims = 0
-add_prims_tojson = [] # list of prim paths to save in bb
-asset_paths = [] # list to check occurence asset path of same asset
-
-class PC_Annotation:
-
-
+class PC_Annotation():
+    def __init__(self):
+        super().__init__()
+        self.created_prims = ""
+        
 
 
     def build_ui(self):
-
-
-
 
         def get_name(prim_path):
                     
@@ -52,22 +47,11 @@ class PC_Annotation:
         # get bounding box of a prim using prim_path
         # to get width, height and depth
         def compute_path_bbox(prim_path):
-
-            a = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
-            width = a[1][0] - a [0][0]
-            height = a[1][1] - a[0][1]
-            depth = a[1][2] - a[0][2]
+            bbox = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
+            width = bbox[1][0] - bbox[0][0]
+            height = bbox[1][1] - bbox[0][1]
+            depth = bbox[1][2] - bbox[0][2]
             return width, height, depth
-
-
-                
-
-
-
-
-
-                
-
 
 
         def on_filter_item(dialog: FilePickerDialog, item: FileBrowserItem, exts: List) -> bool:
@@ -85,15 +69,11 @@ class PC_Annotation:
                 return True
 
 
-
         def options_pane_build_fn(selected_items):
             with ui.CollapsableFrame("Reference Options"):
                 with ui.HStack(height=0, spacing=2):
                     ui.Label("Prim Path", width=0)
             return True
-
-
-
 
                 # For JSON Files
 
@@ -122,27 +102,27 @@ class PC_Annotation:
             path_field_json.model.set_value(fullpath)
 
 
-
         # Write bounding box into a json file
         def save_bb():
             # In case Done is not pressed
-            if created_prims !=0 :
+            if self.created_prims != "" :
                 place_prim()
             file_path  = path_field_json.model.get_value_as_string()
             if file_path == "":
                 validation_saving.text = "Browse the json file first!"
             else:
-                check_assets_exist()
+                create_file()
                 # creating list to save json objects
                 list_of_prims = []
-                # Iterate list of prim paths ---- add_prims_tojson
-
-                for p in add_prims_tojson:
-
-                
-                    name = get_name(p)
-                    translate, rotation = get_transfRot(p)
-                    width, height, depth = compute_path_bbox(p)
+                # Iterate over /World/Scope
+                stage = omni.usd.get_context().get_stage()
+                prim_path = Sdf.Path("/World/Scope")
+                prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
+                for p in prim.GetAllChildren():
+                    print(type(str(p.GetPrimPath())))
+                    name = get_name(str(p.GetPrimPath()))
+                    translate, rotation = get_transfRot(str(p.GetPrimPath()))
+                    width, height, depth = compute_path_bbox(str(p.GetPrimPath()))
 
                     center_x = translate[0]
                     center_y = translate[1]
@@ -152,7 +132,7 @@ class PC_Annotation:
                     rot_y = rotation[1]
                     rot_z = rotation[2]
 
-                    data = prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
+                    data = Prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
                     #     appending instances to list
                     list_of_prims.append(data.__dict__)
 
@@ -165,21 +145,9 @@ class PC_Annotation:
                 validation_saving.text = "Data Saved!"
 
 
-
-
-            #######################
-
-
-
-                
-                
-        def test1():
-
-            
+        def get_files_name():
+            objects  = []
             directory_path  = "/home/johnny/Downloads"
-            
-            
-            
             for x in os.listdir(directory_path):
                 if x.endswith(".usd"):
                     # Prints only text file present in My Folder
@@ -188,18 +156,9 @@ class PC_Annotation:
             return objects
 
 
-        # def load_pointcloud():
-        #     ply_pc = o3d.io.read_point_cloud(self.path_field.model.get_value_as_string())
-        #     self.pc = ply_pc
-        #     self.point_count.text = f"{len(ply_pc.points): ,} loaded from the pointcloud!"
-        #     self.set_pc(ply_pc)
-
         def add_ref_to_scene(ref_scene_path: str, ref_path_in_scene: str):
             from pxr import UsdGeom
             from scipy.spatial.transform import Rotation as R
-
-
-
             stage = omni.usd.get_context().get_stage()
             ref_prim = stage.OverridePrim(ref_path_in_scene)
             ref_prim.GetReferences().AddReference(ref_scene_path)
@@ -210,15 +169,12 @@ class PC_Annotation:
             UsdGeom.XformCommonAPI(ref_prim).SetScale((1, 1, 1))
 
         def create_prim(button):
-            global created_prims
+            # global created_prims
             validation_saving.text = ""
-            check_assets_exist()
-            if len(add_prims_tojson) == 0:
-                    create_file()
-            if created_prims==0:
+            create_file()
+            if self.created_prims == "":
                 # create_file()
                 prim_name = button.text
-                print(prim_name)
                 # Check if prim already exist
                 stage = omni.usd.get_context().get_stage()
                 # Access group
@@ -226,121 +182,104 @@ class PC_Annotation:
                 prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                 # set asset_path of the prim to be created
                 asset_path = f"/home/johnny/Downloads/usdfiles/{prim_name}.usd"
-                # count occurence of object if exists
-                count = 0
-                for x in asset_paths:
-                    if asset_path == x:
-                        count = count + 1
+                # iterate over /World/Scope
+                prim_path = Sdf.Path("/World/Scope")
+                prim_scope: Usd.Prim = stage.GetPrimAtPath(prim_path)
+                list_on_stage = []
+                for p in prim_scope.GetAllChildren():
+                    list_on_stage.append(p.GetName())
+                # Iterate over all the prims
+                taken_idx = list(map(lambda e: int(e.split("_")[-1]), filter(lambda e: e.startswith(f"{prim_name}_"), list_on_stage)))
+                idx = min(filter(lambda e: e not in taken_idx, range(max(taken_idx) + 2 if len(taken_idx) > 0 else 1)))
 
-                ref_name = f"/World/Scope/{prim_name}_{count}"
+                ref_name = f"/World/Scope/{prim_name}_{idx}"
                 add_ref_to_scene(asset_path, ref_name)
+
+                # unlock if it was locked
+                omni.kit.commands.execute('UnlockSpecs',
+                    spec_paths=[Sdf.Path(ref_name)],
+                    hierarchy=False)
+
                 
-                created_prims = ref_name
-                # Add path to the list of assets
-                asset_paths.append(asset_path)
+                self.created_prims = ref_name
+
             else:
                 validation.text = "One Object already created"
                 validation_saving.text = ""
 
 
-        def check_assets_exist():
-            stage = omni.usd.get_context().get_stage()
-            i = 0
-            for p in  add_prims_tojson:
-                prim_path = Sdf.Path(p)
-                prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
-                if prim.IsValid():
-                    print("")
-                else:
-
-                    add_prims_tojson.remove(p)
-
-            # check if scope exists or no
-            create_file()
-
+        def undo_prim():
+            validation_saving.text = ""
 
             
-                    
 
-
-        def undo_prim():
-            global created_prims
-            validation_saving.text = ""
-            if created_prims!=0:
+            if self.created_prims != "":
                 stage = omni.usd.get_context().get_stage()
-                prim = stage.DefinePrim(created_prims)
-                if stage.RemovePrim(created_prims):
+                prim = stage.DefinePrim(self.created_prims)
+                if stage.RemovePrim(self.created_prims):
                     print('prim removed')
-                    created_prims = 0
-                    del asset_paths[-1]
+                    self.created_prims = ""
 
 
 
-                
         def place_prim():
-            global created_prims
-            global add_prims_tojson
-            check_assets_exist()
+            create_file()
             validation_saving.text = ""
-            if created_prims!=0:
+            if self.created_prims != "":
                 validation.text = ""
-                add_prims_tojson.append(created_prims)
                 omni.kit.commands.execute('LockSpecs',
-                spec_paths=[Sdf.Path(created_prims)],
+                spec_paths=[Sdf.Path(self.created_prims)],
                 hierarchy=False)
 
-                created_prims =  0
+                self.created_prims =  ""
 
             else:
                 validation.text = "Select an object!"
-                
-                
-                
-            print(add_prims_tojson)
-            print(len(add_prims_tojson))
+
+
 
         def reset_list():
             # Delete prims from scene
+            validation.text = ""
             validation_saving.text = ""
             stage = omni.usd.get_context().get_stage()
-            for x in add_prims_tojson:
-                stage.RemovePrim(x)
-            # Empty List
-            add_prims_tojson.clear()
-            print(add_prims_tojson)
+            # Iterate over /World/Scope
             
+            prim_path = Sdf.Path("/World/Scope")
+            prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
+            if prim.IsValid():
+
+                for p in prim.GetAllChildren():
+                    if p.IsValid():
+                        stage.RemovePrim(str(p.GetPrimPath()))
+                self.created_prims = ""
+                omni.kit.commands.execute('DeletePrims',
+                    paths=['/World/Scope'],
+                    destructive=False)
+
                     
-
-
-
-
-
-
-
-
-
-
-
-
         def create_file():
              stage = omni.usd.get_context().get_stage()
 
-             prim_path = Sdf.Path("/World")
+             prim_path = Sdf.Path("/World/Scope")
              prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
-             flag = 0
-             for child_prim in prim.GetAllChildren():
-                if child_prim.GetReferences().GetPrim().GetName() == "Scope":
-                    flag = 1
-                    print("Already exist")
-                    
-
-             if flag  == 0:
+             if not prim.IsValid():
                 omni.kit.commands.execute('CreatePrimWithDefaultXform',
                 prim_type='Scope',
                 prim_path=None,
                 attributes={},
                 select_new_prim=True)
                 print("file created")
+
+
+        def test():
+            stage = omni.usd.get_context().get_stage()
+            prim_path = Sdf.Path("/World/Scope")
+            prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
+            for p in prim.GetAllChildren():
+                print(p.GetPrimPath())
+                
+
 
 
         with ui.VStack():
@@ -351,14 +290,8 @@ class PC_Annotation:
                 horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
                 vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
                 )
-            
-
-                objects  = []
                 
-                objects_in_dir = test1()
-                        
-
-
+                objects_in_dir = get_files_name()
 
                 with left_frame:
                     with ui.VStack():
@@ -375,9 +308,6 @@ class PC_Annotation:
                 ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=undo_prim)
                 ui.Button("Reset", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=reset_list)
 
-
-
-
             with ui.VStack():         
                 with ui.HStack(height=60):  
                     ui.Label("Save json file in: ")
@@ -385,4 +315,4 @@ class PC_Annotation:
                     ui.Button("Browse", clicked_fn=open_file_dialog_json)
                     validation_saving = ui.Label("")
                 ui.Button("Save BB", height=ui.Pixel(10), clicked_fn=save_bb)
-                ui.Button("create_file", clicked_fn=create_file)
+                ui.Button("test", height=ui.Pixel(10), clicked_fn=test)
