@@ -10,17 +10,17 @@ import json
 from builtins import max
 
 class PC_Annotation():
-    def __init__(self, dir_path, set_dir_path, **kwargs):
+    def __init__(self, dir_path, set_dir_path, refresh, **kwargs):
         super().__init__()
         self.created_prims = ""
         self.dir_path = dir_path
         self.set_dir_path = set_dir_path
-
+        self.refresh  = refresh
+        
 
     def build_ui(self):
 
-        def get_name(prim_path):
-                    
+        def get_name(prim_path):      
             stage = omni.usd.get_context().get_stage()
             prim_path = Sdf.Path(prim_path)
             prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
@@ -30,7 +30,6 @@ class PC_Annotation():
             return name
 
         def get_transfRot(prim_path):
-            
             stage = omni.usd.get_context().get_stage()
             prim_path = Sdf.Path(prim_path)
             prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
@@ -44,9 +43,6 @@ class PC_Annotation():
             return translate, rotation
 
 
-                    
-        # get bounding box of a prim using prim_path
-        # to get width, height and depth
         def compute_path_bbox(prim_path):
             bbox = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
             width = bbox[1][0] - bbox[0][0]
@@ -85,7 +81,7 @@ class PC_Annotation():
             dialog = FilePickerDialog(
                 "Demo Filepicker",
                 apply_button_label="Open",
-                click_apply_handler=lambda filename, dirname: on_click_open(dialog, filename, dirname, path_field_json),
+                click_apply_handler=lambda filename, dirname: on_click_open_json(dialog, filename, dirname, path_field_json),
                 item_filter_options=item_filter_options_description,
                 item_filter_fn=lambda item: on_filter_item(dialog, item, item_filters),
                 options_pane_build_fn=options_pane_build_fn,
@@ -94,14 +90,13 @@ class PC_Annotation():
             dialog.show()
 
 
-        def on_click_open(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
+        def on_click_open_json(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
             dialog.hide()
             dirname = dirname.strip()
             if dirname and not dirname.endswith("/"):
                 dirname += "/"
             fullpath = f"{dirname}{filename}"
             path_field_json.model.set_value(fullpath)
-
 
             # For USD Files
         def open_dir_dialog_usd():
@@ -126,6 +121,7 @@ class PC_Annotation():
                 dirname += "/"
             fullpath = f"{dirname}{filename}"
             self.dir_path_field.model.set_value(fullpath)
+            self.refresh()
 
 
         # Write bounding box into a json file
@@ -145,7 +141,6 @@ class PC_Annotation():
                 prim_path = Sdf.Path("/World/Scope")
                 prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                 for p in prim.GetAllChildren():
-                    print(type(str(p.GetPrimPath())))
                     name = get_name(str(p.GetPrimPath()))
                     translate, rotation = get_transfRot(str(p.GetPrimPath()))
                     width, height, depth = compute_path_bbox(str(p.GetPrimPath()))
@@ -242,7 +237,6 @@ class PC_Annotation():
                 stage = omni.usd.get_context().get_stage()
                 prim = stage.DefinePrim(self.created_prims)
                 if stage.RemovePrim(self.created_prims):
-                    print('prim removed')
                     self.created_prims = ""
 
 
@@ -295,17 +289,6 @@ class PC_Annotation():
                 prim_path=None,
                 attributes={},
                 select_new_prim=True)
-                print("file created")
-
-
-        def test():
-            stage = omni.usd.get_context().get_stage()
-            prim_path = Sdf.Path("/World/Scope")
-            prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
-            for p in prim.GetAllChildren():
-                print(p.GetPrimPath())
-                
-
 
 
         with ui.VStack():
@@ -319,6 +302,8 @@ class PC_Annotation():
 
                     
                     ui.Button("Browse", clicked_fn=open_dir_dialog_usd)
+                    ui.Button("Refresh", height=ui.Pixel(10), clicked_fn=self.refresh)
+
 
             with ui.HStack():
 
@@ -356,4 +341,4 @@ class PC_Annotation():
                     ui.Button("Browse", clicked_fn=open_file_dialog_json)
                     validation_saving = ui.Label("")
                 ui.Button("Save BB", height=ui.Pixel(10), clicked_fn=save_bb)
-                # ui.Button("test", height=ui.Pixel(10), clicked_fn=self.set_directory("hello"))
+

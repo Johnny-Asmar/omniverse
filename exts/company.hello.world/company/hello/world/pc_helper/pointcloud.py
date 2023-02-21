@@ -1,6 +1,7 @@
 import omni.kit.commands
 import omni.usd
 from pxr import UsdGeom
+import os 
 
 
 def create_pointcloud(pc, points_path, width):
@@ -16,10 +17,19 @@ def create_pointcloud(pc, points_path, width):
     create_flow_pointcloud(points_path)
 
 
+
+def get_url():
+    for dirpath, dirnames, filenames in os.walk("/home"): 
+        for filename in filenames: 
+            if filename.endswith("PointCloud.usda") and "1eb" in dirpath: 
+                path = os.path.join(dirpath, filename)
+
+    return path
+
 def create_flow_pointcloud(pc_path):
 
     omni.kit.commands.execute("FlowCreateUsdPreset", path=pc_path, layer=0, preset_name="PointCloud",
-                              url='/home/johnny/.local/share/ov/pkg/deps/1eb06a429c5271adc9ef8e5307b0f59f/extscache/omni.flowusd-104.1.9+104.1.lx64.r.cp37/data/presets/PointCloud/PointCloud.usda',
+                              url=get_url(),
                               is_copy=True, create_ref=False, emitter_only=False)
 
     omni.kit.commands.execute("ChangeSetting", path="rtx/flow/enabled", value=True)

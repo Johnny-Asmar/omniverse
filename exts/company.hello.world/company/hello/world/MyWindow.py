@@ -1,9 +1,7 @@
 import omni.ui as ui
-
 from company.hello.world.ui.file_browser import AIPEFileBrowserMenu
 from company.hello.world.ui.pc_annotation import PC_Annotation
 from company.hello.world.pc_helper.pointcloud import create_pointcloud
-
 
 WIDTH = 0.02
 PC_PATH = "/World/pc"
@@ -21,25 +19,16 @@ class MyWindow(ui.Window):
         self.pc = pc
         create_pointcloud(pc, PC_PATH, WIDTH)
 
-    def get_pc(self):
-        return self.pc
-
     def set_dir_path(self, new_path):
         self.dir_path = new_path
 
-
-    def _on_change_info_path(self, changed_path):
+    def refresh(self):
         self.frame.rebuild()
-
 
     def _build_window(self):
 
-        def refresh():
-            self.frame.rebuild()
-
-
         self.file_browser_menu = AIPEFileBrowserMenu(self.set_pc)
-        self.annotation_menu = PC_Annotation(self.dir_path, self.set_dir_path)
+        self.annotation_menu = PC_Annotation(self.dir_path, self.set_dir_path, self.refresh)
 
         with ui.VStack():
             with ui.CollapsableFrame("Load PC", height=0):
@@ -50,6 +39,5 @@ class MyWindow(ui.Window):
                 with ui.Frame():
                     with ui.VStack():
                         self.annotation_menu.build_ui()
-                        ui.Button("refresh", height=ui.Pixel(10), clicked_fn=refresh)
 
                     
