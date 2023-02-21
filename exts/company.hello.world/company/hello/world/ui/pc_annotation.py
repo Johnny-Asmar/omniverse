@@ -10,10 +10,11 @@ import json
 from builtins import max
 
 class PC_Annotation():
-    def __init__(self):
+    def __init__(self, dir_path, set_dir_path, **kwargs):
         super().__init__()
         self.created_prims = ""
-        
+        self.dir_path = dir_path
+        self.set_dir_path = set_dir_path
 
 
     def build_ui(self):
@@ -84,22 +85,47 @@ class PC_Annotation():
             dialog = FilePickerDialog(
                 "Demo Filepicker",
                 apply_button_label="Open",
-                click_apply_handler=lambda filename, dirname: on_click_open_json(dialog, filename, dirname, path_field_json),
+                click_apply_handler=lambda filename, dirname: on_click_open(dialog, filename, dirname, path_field_json),
                 item_filter_options=item_filter_options_description,
                 item_filter_fn=lambda item: on_filter_item(dialog, item, item_filters),
                 options_pane_build_fn=options_pane_build_fn,
             )
 
-            dialog.show("/home/anthony/PycharmProjects/AIPipeline/files/datasets/real")
+            dialog.show()
 
 
-        def on_click_open_json(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
+        def on_click_open(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
             dialog.hide()
             dirname = dirname.strip()
             if dirname and not dirname.endswith("/"):
                 dirname += "/"
             fullpath = f"{dirname}{filename}"
             path_field_json.model.set_value(fullpath)
+
+
+            # For USD Files
+        def open_dir_dialog_usd():
+            item_filters = [".usd"]
+            item_filter_options_description = ["Directories with usds(*.usd)"]
+
+            dialog = FilePickerDialog(
+                "Demo Filepicker",
+                apply_button_label="Open",
+                click_apply_handler=lambda filename, dirname: on_click_open_usd(dialog, filename, dirname, self.dir_path_field),
+                item_filter_options=item_filter_options_description,
+                item_filter_fn=lambda item: on_filter_item(dialog, item, item_filters),
+                options_pane_build_fn=options_pane_build_fn,
+            )
+
+            dialog.show()
+
+        def on_click_open_usd(dialog: FilePickerDialog, filename: str, dirname: str, dir_path_field: ui.StringField):
+            dialog.hide()
+            dirname = dirname.strip()
+            if dirname and not dirname.endswith("/"):
+                dirname += "/"
+            fullpath = f"{dirname}{filename}"
+            self.dir_path_field.model.set_value(fullpath)
 
 
         # Write bounding box into a json file
@@ -144,14 +170,16 @@ class PC_Annotation():
 
                 validation_saving.text = "Data Saved!"
 
-
+        # function will be called from another class
         def get_files_name():
             objects  = []
-            directory_path  = "/home/johnny/Downloads"
-            for x in os.listdir(directory_path):
-                if x.endswith(".usd"):
-                    # Prints only text file present in My Folder
-                    objects.append(x.partition('.')[0])
+            directory_path  = self.dir_path_field.model.get_value_as_string()
+            if not os.path.isfile(directory_path):
+                if os.path.exists(directory_path):
+                    for x in os.listdir(directory_path):
+                        if x.endswith(".usd"):
+                            # Prints only text file present in My Folder
+                            objects.append(x.partition('.')[0])
 
             return objects
 
@@ -210,9 +238,6 @@ class PC_Annotation():
 
         def undo_prim():
             validation_saving.text = ""
-
-            
-
             if self.created_prims != "":
                 stage = omni.usd.get_context().get_stage()
                 prim = stage.DefinePrim(self.created_prims)
@@ -235,6 +260,7 @@ class PC_Annotation():
 
             else:
                 validation.text = "Select an object!"
+                
 
 
 
@@ -283,24 +309,39 @@ class PC_Annotation():
 
 
         with ui.VStack():
+            with ui.HStack(height=10):
+                    ui.Label("Select Directory of USD Files: ")
+                    # ui.StringField(self.dir_path)
+                    self.dir_path_field = ui.StringField()
+                    self.dir_path_field.model.set_value(self.dir_path)
+                    self.dir_path_field.model.add_value_changed_fn(lambda m:
+                                                            self.set_dir_path(m.get_value_as_string()))
+
+                    
+                    ui.Button("Browse", clicked_fn=open_dir_dialog_usd)
+
             with ui.HStack():
 
-                left_frame= ui.ScrollingFrame(
-                height=250, width=200,
-                horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
-                vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
-                )
+                
                 
                 objects_in_dir = get_files_name()
+                if len(objects_in_dir) != 0:
+                    left_frame= ui.ScrollingFrame(
+                    height=250, width=200,
+                    horizontal_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_OFF,
+                    vertical_scrollbar_policy=ui.ScrollBarPolicy.SCROLLBAR_ALWAYS_ON,
+                    )
+                    with left_frame:
+                        with ui.VStack():
 
-                with left_frame:
-                    with ui.VStack():
+                            for but in objects_in_dir:
+                                button = ui.Button(but, height=ui.Pixel(40))
+                                button.set_clicked_fn(lambda b=button: create_prim(b))
 
-                        for but in objects_in_dir:
-                            button = ui.Button(but, height=ui.Pixel(40))
-                            button.set_clicked_fn(lambda b=button: create_prim(b))
+                else:
+                    validation_dir = ui.Label("Please check Direcctory path")
+
                         
-                        button.set_clicked_fn(lambda b=button: create_prim(b))
                 with ui.VStack(width=200):
                     ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=place_prim)
                     validation = ui.Label("")
@@ -315,4 +356,4 @@ class PC_Annotation():
                     ui.Button("Browse", clicked_fn=open_file_dialog_json)
                     validation_saving = ui.Label("")
                 ui.Button("Save BB", height=ui.Pixel(10), clicked_fn=save_bb)
-                ui.Button("test", height=ui.Pixel(10), clicked_fn=test)
+                # ui.Button("test", height=ui.Pixel(10), clicked_fn=self.set_directory("hello"))

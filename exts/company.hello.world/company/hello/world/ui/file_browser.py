@@ -55,7 +55,7 @@ class AIPEFileBrowserMenu:
                 options_pane_build_fn=options_pane_build_fn,
             )
 
-            dialog.show("/home/anthony/PycharmProjects/AIPipeline/files/datasets/real")
+            dialog.show()
 
         def load_pointcloud():
             ply_pc = o3d.io.read_point_cloud(self.path_field.model.get_value_as_string())
