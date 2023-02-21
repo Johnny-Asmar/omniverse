@@ -1,7 +1,7 @@
 import omni.kit.commands
 import omni.usd
 from pxr import UsdGeom
-import os 
+import omni.flowusd as flow
 
 
 def create_pointcloud(pc, points_path, width):
@@ -19,12 +19,11 @@ def create_pointcloud(pc, points_path, width):
 
 
 def get_url():
-    for dirpath, dirnames, filenames in os.walk("/home"): 
-        for filename in filenames: 
-            if filename.endswith("PointCloud.usda") and "1eb" in dirpath: 
-                path = os.path.join(dirpath, filename)
 
-    return path
+    full_path  = flow.__file__
+    url = full_path.split("/omni/flowusd/")[0]+"/data/presets/PointCloud/PointCloud.usda"
+
+    return url
 
 def create_flow_pointcloud(pc_path):
 
