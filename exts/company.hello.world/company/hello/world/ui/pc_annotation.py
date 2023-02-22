@@ -16,7 +16,6 @@ class PC_Annotation():
         self.dir_path = dir_path
         self.set_dir_path = set_dir_path
         self.refresh  = refresh
-        
 
     def build_ui(self):
 
@@ -175,7 +174,6 @@ class PC_Annotation():
                         if x.endswith(".usd"):
                             # Prints only text file present in My Folder
                             objects.append(x.partition('.')[0])
-
             return objects
 
 
@@ -190,6 +188,7 @@ class PC_Annotation():
             UsdGeom.XformCommonAPI(ref_prim).SetTranslate((0, 0, 0))
             UsdGeom.XformCommonAPI(ref_prim).SetRotate((0, 0, 0))
             UsdGeom.XformCommonAPI(ref_prim).SetScale((1, 1, 1))
+
 
         def create_prim(button):
             # global created_prims
@@ -222,8 +221,6 @@ class PC_Annotation():
                 omni.kit.commands.execute('UnlockSpecs',
                     spec_paths=[Sdf.Path(ref_name)],
                     hierarchy=False)
-
-                
                 self.created_prims = ref_name
 
             else:
@@ -239,8 +236,6 @@ class PC_Annotation():
                 if stage.RemovePrim(self.created_prims):
                     self.created_prims = ""
 
-
-
         def place_prim():
             create_file()
             validation_saving.text = ""
@@ -254,8 +249,6 @@ class PC_Annotation():
 
             else:
                 validation.text = "Select an object!"
-                
-
 
 
         def reset_list():
@@ -276,11 +269,9 @@ class PC_Annotation():
                 omni.kit.commands.execute('DeletePrims',
                     paths=['/World/Scope'],
                     destructive=False)
-
-                    
+    
         def create_file():
              stage = omni.usd.get_context().get_stage()
-
              prim_path = Sdf.Path("/World/Scope")
              prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
              if not prim.IsValid():
@@ -299,16 +290,11 @@ class PC_Annotation():
                     self.dir_path_field.model.set_value(self.dir_path)
                     self.dir_path_field.model.add_value_changed_fn(lambda m:
                                                             self.set_dir_path(m.get_value_as_string()))
-
-                    
                     ui.Button("Browse", clicked_fn=open_dir_dialog_usd)
                     ui.Button("Refresh", height=ui.Pixel(10), clicked_fn=self.refresh)
 
 
             with ui.HStack():
-
-                
-                
                 objects_in_dir = get_files_name()
                 if len(objects_in_dir) != 0:
                     left_frame= ui.ScrollingFrame(
@@ -318,19 +304,15 @@ class PC_Annotation():
                     )
                     with left_frame:
                         with ui.VStack():
-
                             for but in objects_in_dir:
                                 button = ui.Button(but, height=ui.Pixel(40))
                                 button.set_clicked_fn(lambda b=button: create_prim(b))
-
                 else:
                     validation_dir = ui.Label("Please check Direcctory path")
-
-                        
+   
                 with ui.VStack(width=200):
                     ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=place_prim)
                     validation = ui.Label("")
-
                 ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=undo_prim)
                 ui.Button("Reset", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=reset_list)
 

@@ -18,12 +18,8 @@ class CompanyHelloWorldExtension(omni.ext.IExt):
 
 
     def on_startup(self, ext_id):
-        print("startup")
-        
-
         self._window = MyWindow("PC Annotation", width=800, height=800)
         
-
     def on_shutdown(self):
         print("[company.hello.world] company hello world shutdown")
         
