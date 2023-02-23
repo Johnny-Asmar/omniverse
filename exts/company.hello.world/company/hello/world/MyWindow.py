@@ -13,7 +13,7 @@ class MyWindow(ui.Window):
         self.file_browser_menu = None
         self.annotation_menu = None
         self.pc = None
-        self.dir_path = "/home/johnny/Downloads"
+        self.dir_path = "/home/johnny/Downloads/"
 
     def set_pc(self, pc):
         self.pc = pc

@@ -5,7 +5,7 @@ import omni.ui as ui
 import os
 import omni
 from pxr import Sdf, Usd, UsdGeom, Gf
-from company.hello.world.classes.prim import Prim
+from company.hello.world.classes.prim import Prim_Object
 import json
 from builtins import max
 
@@ -49,6 +49,9 @@ class PC_Annotation():
             depth = bbox[1][2] - bbox[0][2]
             return width, height, depth
 
+        def for_center(prim_path):
+            bbox = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
+            return bbox[0][0], bbox[0][1], bbox[0][2], bbox[1][0], bbox[1][1], bbox[1][2]
 
         def on_filter_item(dialog: FilePickerDialog, item: FileBrowserItem, exts: List) -> bool:
             if not item or item.is_folder:
@@ -141,26 +144,41 @@ class PC_Annotation():
                 prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                 for p in prim.GetAllChildren():
                     name = get_name(str(p.GetPrimPath()))
+
                     translate, rotation = get_transfRot(str(p.GetPrimPath()))
-                    width, height, depth = compute_path_bbox(str(p.GetPrimPath()))
-
-                    center_x = translate[0]
-                    center_y = translate[1]
-                    center_z = translate[2]
-
                     rot_x = rotation[0]
                     rot_y = rotation[1]
                     rot_z = rotation[2]
+                    # Set Rotate to 0 when getting widt, height and depth
+                    UsdGeom.XformCommonAPI(p).SetRotate((0, 0, 0))
 
-                    data = Prim(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
-                    #     appending instances to list
-                    list_of_prims.append(data.__dict__)
+                    width, height, depth = compute_path_bbox(str(p.GetPrimPath()))
 
-                
+                    # Set back oriiginal rotation to get the center
+
+                    UsdGeom.XformCommonAPI(p).SetRotate((rot_x, rot_y, rot_z))
+                    x_min, y_min, z_min, x_max, y_max, z_max = for_center(str(p.GetPrimPath()))
+
+                    center_x = (x_min + x_max) / 2 
+                    center_y = (y_min + y_max) / 2
+                    center_z = (z_min + z_max) / 2
+
+                    
+                    
+
+                    
+                    data = Prim_Object(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
+                    
+                    json_data = json.dumps(data, default=lambda o: o.__dict__)
+                    json_format = json.loads(json_data)
+                    list_of_prims.append(json_format)
+
+
                 with open(file_path, 'w') as json_file:
                     json.dump(list_of_prims, json_file, 
                     indent=4,  
                     separators=(',',': '))
+                    
 
                 validation_saving.text = "Data Saved!"
 
@@ -178,7 +196,6 @@ class PC_Annotation():
 
 
         def add_ref_to_scene(ref_scene_path: str, ref_path_in_scene: str):
-            from pxr import UsdGeom
             from scipy.spatial.transform import Rotation as R
             stage = omni.usd.get_context().get_stage()
             ref_prim = stage.OverridePrim(ref_path_in_scene)
@@ -203,7 +220,9 @@ class PC_Annotation():
                 prim_path = Sdf.Path("/World/Scope")
                 prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                 # set asset_path of the prim to be created
-                asset_path = f"/home/johnny/Downloads/usdfiles/{prim_name}.usd"
+                directory_path  = self.dir_path_field.model.get_value_as_string()
+                asset_path = f"{directory_path}{prim_name}.usd"
+                print(asset_path)
                 # iterate over /World/Scope
                 prim_path = Sdf.Path("/World/Scope")
                 prim_scope: Usd.Prim = stage.GetPrimAtPath(prim_path)

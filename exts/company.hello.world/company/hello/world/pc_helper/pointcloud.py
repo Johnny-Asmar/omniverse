@@ -22,7 +22,6 @@ def get_url():
 
     full_path  = flow.__file__
     url = full_path.split("/omni/flowusd/")[0]+"/data/presets/PointCloud/PointCloud.usda"
-
     return url
 
 def create_flow_pointcloud(pc_path):
