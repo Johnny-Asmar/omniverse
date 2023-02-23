@@ -202,7 +202,8 @@ class PC_Annotation():
             ref_prim.GetReferences().AddReference(ref_scene_path)
             # Applying translation
             UsdGeom.XformCommonAPI(ref_prim).CreateXformOps()
-            UsdGeom.XformCommonAPI(ref_prim).SetTranslate((0, 0, 0))
+            trans, rot = get_transfRot("/OmniverseKit_Persp")
+            UsdGeom.XformCommonAPI(ref_prim).SetTranslate((trans[0], trans[1], trans[2]))
             UsdGeom.XformCommonAPI(ref_prim).SetRotate((0, 0, 0))
             UsdGeom.XformCommonAPI(ref_prim).SetScale((1, 1, 1))
 
@@ -222,7 +223,6 @@ class PC_Annotation():
                 # set asset_path of the prim to be created
                 directory_path  = self.dir_path_field.model.get_value_as_string()
                 asset_path = f"{directory_path}{prim_name}.usd"
-                print(asset_path)
                 # iterate over /World/Scope
                 prim_path = Sdf.Path("/World/Scope")
                 prim_scope: Usd.Prim = stage.GetPrimAtPath(prim_path)
@@ -237,10 +237,23 @@ class PC_Annotation():
                 add_ref_to_scene(asset_path, ref_name)
 
                 # unlock if it was locked
+            
                 omni.kit.commands.execute('UnlockSpecs',
                     spec_paths=[Sdf.Path(ref_name)],
                     hierarchy=False)
                 self.created_prims = ref_name
+
+                # Lock all child_prims of the created prim
+
+
+                prim_created_path = Sdf.Path(ref_name)
+                prim_created: Usd.Prim = stage.GetPrimAtPath(prim_created_path)
+                if prim_created.IsValid():
+                    for p in prim_created.GetAllChildren():
+                        if p.IsValid():
+                            omni.kit.commands.execute('LockSpecs',
+                            spec_paths=[Sdf.Path(str(p.GetPrimPath()))],
+                            hierarchy=True)
 
             else:
                 validation.text = "One Object already created"
@@ -300,6 +313,10 @@ class PC_Annotation():
                 attributes={},
                 select_new_prim=True)
 
+
+        def get_perspective_trasnfRot():
+            trans, rot = get_transfRot("/OmniverseKit_Persp")
+            print(trans,rot)
 
         with ui.VStack():
             with ui.HStack(height=10):
