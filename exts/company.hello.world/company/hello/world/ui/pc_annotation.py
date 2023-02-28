@@ -4,10 +4,11 @@ from typing import List
 import omni.ui as ui
 import os
 import omni
-from pxr import Sdf, Usd, UsdGeom, Gf
+from pxr import Sdf, Usd, UsdGeom, Gf, UsdPhysics
 from company.hello.world.classes.prim import Prim_Object
 import json
 from builtins import max
+import numpy as np
 
 class PC_Annotation():
     def __init__(self, dir_path, set_dir_path, refresh, **kwargs):
@@ -51,7 +52,7 @@ class PC_Annotation():
 
         def for_center(prim_path):
             bbox = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
-            return bbox[0][0], bbox[0][1], bbox[0][2], bbox[1][0], bbox[1][1], bbox[1][2]
+            return np.array([bbox[0][0], bbox[0][1], bbox[0][2]]), np.array([bbox[1][0], bbox[1][1], bbox[1][2]])
 
         def on_filter_item(dialog: FilePickerDialog, item: FileBrowserItem, exts: List) -> bool:
             if not item or item.is_folder:
@@ -157,30 +158,29 @@ class PC_Annotation():
                     # Set back oriiginal rotation to get the center
 
                     UsdGeom.XformCommonAPI(p).SetRotate((rot_x, rot_y, rot_z))
-                    x_min, y_min, z_min, x_max, y_max, z_max = for_center(str(p.GetPrimPath()))
+                    c_min, c_max = for_center(str(p.GetPrimPath()))
 
-                    center_x = (x_min + x_max) / 2 
-                    center_y = (y_min + y_max) / 2
-                    center_z = (z_min + z_max) / 2
+                    center = (c_min + c_max)/2
 
                     
-                    
+                    # Get Asset_path
+                    asset_path = p.GetAttribute('asset_path').Get()
 
                     
-                    data = Prim_Object(name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth)
+                    data = Prim_Object(name, center[0], center[1], center[2], rot_x, rot_y, rot_z, width, height, depth, asset_path)
                     
                     json_data = json.dumps(data, default=lambda o: o.__dict__)
                     json_format = json.loads(json_data)
                     list_of_prims.append(json_format)
 
-
-                with open(file_path, 'w') as json_file:
-                    json.dump(list_of_prims, json_file, 
-                    indent=4,  
-                    separators=(',',': '))
-                    
-
-                validation_saving.text = "Data Saved!"
+                if len(list_of_prims) == 0:
+                    validation_saving.text = "No Data to save"
+                else:
+                    with open(file_path, 'w') as json_file:
+                        json.dump(list_of_prims, json_file, 
+                        indent=4,  
+                        separators=(',',': '))
+                    validation_saving.text = "Data Saved!"
 
         # function will be called from another class
         def get_files_name():
@@ -197,9 +197,25 @@ class PC_Annotation():
 
         def add_ref_to_scene(ref_scene_path: str, ref_path_in_scene: str):
             from scipy.spatial.transform import Rotation as R
+            
             stage = omni.usd.get_context().get_stage()
             ref_prim = stage.OverridePrim(ref_path_in_scene)
             ref_prim.GetReferences().AddReference(ref_scene_path)
+            # Save the asset path to reference it later when adding to json
+            attr_name = "asset_path"
+            omni.kit.commands.execute("CreateUsdAttributeCommand",
+                prim=ref_prim,
+                attr_name=attr_name,
+                attr_type=Sdf.ValueTypeNames.String,
+
+            )
+            prim_path = Sdf.Path(ref_path_in_scene)
+            prev_value = ref_prim.GetAttribute(attr_name)
+            omni.kit.commands.execute("ChangeProperty",
+            prop_path=Sdf.Path(prim_path.AppendProperty(attr_name)),
+            value=ref_scene_path,
+            prev=prev_value.Get()
+            )
             # Applying translation
             UsdGeom.XformCommonAPI(ref_prim).CreateXformOps()
             trans, rot = get_transfRot("/OmniverseKit_Persp")
@@ -209,17 +225,11 @@ class PC_Annotation():
 
 
         def create_prim(button):
-            # global created_prims
             validation_saving.text = ""
             create_file()
             if self.created_prims == "":
-                # create_file()
                 prim_name = button.text
-                # Check if prim already exist
                 stage = omni.usd.get_context().get_stage()
-                # Access group
-                prim_path = Sdf.Path("/World/Scope")
-                prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                 # set asset_path of the prim to be created
                 directory_path  = self.dir_path_field.model.get_value_as_string()
                 asset_path = f"{directory_path}{prim_name}.usd"
@@ -232,20 +242,14 @@ class PC_Annotation():
                 # Iterate over all the prims
                 taken_idx = list(map(lambda e: int(e.split("_")[-1]), filter(lambda e: e.startswith(f"{prim_name}_"), list_on_stage)))
                 idx = min(filter(lambda e: e not in taken_idx, range(max(taken_idx) + 2 if len(taken_idx) > 0 else 1)))
-
                 ref_name = f"/World/Scope/{prim_name}_{idx}"
                 add_ref_to_scene(asset_path, ref_name)
-
                 # unlock if it was locked
-            
                 omni.kit.commands.execute('UnlockSpecs',
                     spec_paths=[Sdf.Path(ref_name)],
                     hierarchy=False)
                 self.created_prims = ref_name
-
                 # Lock all child_prims of the created prim
-
-
                 prim_created_path = Sdf.Path(ref_name)
                 prim_created: Usd.Prim = stage.GetPrimAtPath(prim_created_path)
                 if prim_created.IsValid():
@@ -254,7 +258,6 @@ class PC_Annotation():
                             omni.kit.commands.execute('LockSpecs',
                             spec_paths=[Sdf.Path(str(p.GetPrimPath()))],
                             hierarchy=True)
-
             else:
                 validation.text = "One Object already created"
                 validation_saving.text = ""
@@ -276,9 +279,7 @@ class PC_Annotation():
                 omni.kit.commands.execute('LockSpecs',
                 spec_paths=[Sdf.Path(self.created_prims)],
                 hierarchy=False)
-
                 self.created_prims =  ""
-
             else:
                 validation.text = "Select an object!"
 
@@ -289,11 +290,9 @@ class PC_Annotation():
             validation_saving.text = ""
             stage = omni.usd.get_context().get_stage()
             # Iterate over /World/Scope
-            
             prim_path = Sdf.Path("/World/Scope")
             prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
             if prim.IsValid():
-
                 for p in prim.GetAllChildren():
                     if p.IsValid():
                         stage.RemovePrim(str(p.GetPrimPath()))
@@ -313,10 +312,10 @@ class PC_Annotation():
                 attributes={},
                 select_new_prim=True)
 
+        
 
-        def get_perspective_trasnfRot():
-            trans, rot = get_transfRot("/OmniverseKit_Persp")
-            print(trans,rot)
+
+
 
         with ui.VStack():
             with ui.HStack(height=10):
@@ -343,8 +342,11 @@ class PC_Annotation():
                             for but in objects_in_dir:
                                 button = ui.Button(but, height=ui.Pixel(40))
                                 button.set_clicked_fn(lambda b=button: create_prim(b))
+                elif self.dir_path_field.model.get_value_as_string() == "":
+                    validation_dir = ui.Label("Browse a Directory")
                 else:
-                    validation_dir = ui.Label("Please check Direcctory path")
+                    validation_dir = ui.Label("No USD files in this directory")
+
    
                 with ui.VStack(width=200):
                     ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=place_prim)
@@ -359,4 +361,3 @@ class PC_Annotation():
                     ui.Button("Browse", clicked_fn=open_file_dialog_json)
                     validation_saving = ui.Label("")
                 ui.Button("Save BB", height=ui.Pixel(10), clicked_fn=save_bb)
-

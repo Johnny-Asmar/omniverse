@@ -1,6 +1,7 @@
 import omni.ui as ui
 from company.hello.world.ui.file_browser import AIPEFileBrowserMenu
 from company.hello.world.ui.pc_annotation import PC_Annotation
+from company.hello.world.ui.open_json import Open_JSON
 from company.hello.world.pc_helper.pointcloud import create_pointcloud
 
 WIDTH = 0.02
@@ -13,7 +14,8 @@ class MyWindow(ui.Window):
         self.file_browser_menu = None
         self.annotation_menu = None
         self.pc = None
-        self.dir_path = "/home/johnny/Downloads/"
+        self.dir_path = ""
+        self.open_json_menu = None
 
     def set_pc(self, pc):
         self.pc = pc
@@ -29,15 +31,19 @@ class MyWindow(ui.Window):
 
         self.file_browser_menu = AIPEFileBrowserMenu(self.set_pc)
         self.annotation_menu = PC_Annotation(self.dir_path, self.set_dir_path, self.refresh)
+        self.open_json_menu = Open_JSON()
 
         with ui.VStack():
             with ui.CollapsableFrame("Load PC", height=0):
                 with ui.Frame():
                     self.file_browser_menu.build_ui()
 
-            with ui.CollapsableFrame("Annotate PC"):
+            with ui.CollapsableFrame("Annotate PC", height=0):
                 with ui.Frame():
                     with ui.VStack():
                         self.annotation_menu.build_ui()
 
-                    
+            with ui.CollapsableFrame("Open JSON", height=0):
+                with ui.Frame():
+                    with ui.VStack():
+                        self.open_json_menu.build_ui()        

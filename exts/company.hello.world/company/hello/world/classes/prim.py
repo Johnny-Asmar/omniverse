@@ -20,7 +20,7 @@ class Dimension:
     self.height = height
 
 class Prim_Object:
-  def __init__(self, name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth):
+  def __init__(self, name, center_x, center_y, center_z, rot_x, rot_y, rot_z, width, height, depth, asset_path):
 
     self.name = name
 
@@ -29,3 +29,5 @@ class Prim_Object:
     self.dimensions = Dimension(width, height, depth)
 
     self.rotations = Rotation(rot_x, rot_y, rot_z)
+
+    self.asset_path =  asset_path
