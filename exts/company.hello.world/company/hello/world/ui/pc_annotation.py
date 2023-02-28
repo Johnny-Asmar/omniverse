@@ -9,6 +9,7 @@ from company.hello.world.classes.prim import Prim_Object
 import json
 from builtins import max
 import numpy as np
+import carb
 
 class PC_Annotation():
     def __init__(self, dir_path, set_dir_path, refresh, **kwargs):
@@ -17,6 +18,38 @@ class PC_Annotation():
         self.dir_path = dir_path
         self.set_dir_path = set_dir_path
         self.refresh  = refresh
+        self._input = carb.input.acquire_input_interface()
+    #     self._submouse = self._input.subscribe_to_input_events(self._on_input_event, order=0)
+
+
+
+    # def _on_global_mouse_event(self, event, *_):
+    #     # We care only mouse down
+    #     while True:
+    #         if event.type == carb.input.MouseEventType.LEFT_BUTTON_DOWN:
+    #             selected_paths = self._usd_context.get_selection().get_selected_prim_paths()
+    #             if len(selected_paths) > 0:
+    #                 parent = self.stage.GetPrimAtPath(selected_paths[0])
+    #                 prim_to_select = parent
+    #                 while parent:
+    #                     if parent.GetName() == "ParentPrimExample":
+    #                         prim_to_select = parent
+    #                         break
+    #                     parent = parent.GetParent()
+    #                 self.select_prim(prim_to_select)
+    #             break
+    #             return True
+
+    def _on_input_event(self, event, *_):
+            if event.deviceType == carb.input.DeviceType.MOUSE:
+                print("hi")
+                # return self._on_global_mouse_event(event.event)
+            else:
+                print("hi")
+                
+                return True
+
+    
 
     def build_ui(self):
 
@@ -315,6 +348,10 @@ class PC_Annotation():
         
 
 
+
+
+
+        
 
 
         with ui.VStack():
