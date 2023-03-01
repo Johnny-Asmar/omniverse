@@ -17,7 +17,6 @@ def create_pointcloud(pc, points_path, width):
     create_flow_pointcloud(points_path)
 
 
-
 def get_url():
 
     full_path  = flow.__file__

@@ -55,7 +55,7 @@ Note that in our case, the directory path should end with `aipipeline-pointcloud
 
 **The Parent Prim Checkbox:**
 
-- This is a normal checkbox located at the bottom left of the window. It is advised to let it checked when using this extension since it helps you always in selecting the parent prim of a USD File object.
+- This is a checkbox located at the bottom left of the window. It is advised to let it checked when using this extension since it helps you always in selecting the parent prim of a USD File object.
 - If you click on the object in the scene, instead of getting a child prim of the object and move its location, you will get the toppest prim.
 
 # Be Aware of:
@@ -82,5 +82,5 @@ Note that in our case, the directory path should end with `aipipeline-pointcloud
 
 # Authors
 
-**Johnny Al Asmar**
-**Anthony Yaghi**
+- **Johnny Al Asmar**
+- **Anthony Yaghi**
