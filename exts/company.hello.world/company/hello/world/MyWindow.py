@@ -16,7 +16,7 @@ class MyWindow(ui.Window):
         self.file_browser_menu = None
         self.annotation_menu = None
         self.pc = None
-        self.dir_path = "/home/johnny/Downloads/assets/"
+        self.dir_path = ""
         self.open_json_menu = None
 
     def set_pc(self, pc):

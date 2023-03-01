@@ -310,10 +310,10 @@ class PC_Annotation(ui.scene.ClickGesture):
 
    
                 with ui.VStack(width=200):
-                    ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=place_prim)
+                    ui.Button("Done", width=ui.Pixel(200), height=ui.Pixel(50), clicked_fn=place_prim)
                     validation = ui.Label("")
-                ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=undo_prim)
-                ui.Button("Reset", width=ui.Pixel(200), height=ui.Pixel(100), clicked_fn=reset_list)
+                ui.Button("Undo", width=ui.Pixel(200), height=ui.Pixel(50), clicked_fn=undo_prim)
+                ui.Button("Reset", width=ui.Pixel(200), height=ui.Pixel(50), clicked_fn=reset_list)
 
             with ui.VStack():         
                 with ui.HStack(height=60):  

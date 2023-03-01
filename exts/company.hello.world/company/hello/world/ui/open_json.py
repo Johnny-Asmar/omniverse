@@ -9,8 +9,6 @@ import json
 from scipy.spatial.transform import Rotation as R
 import numpy as np
 class Open_JSON():
-   
-
 
     def build_ui(self):
 
@@ -28,15 +26,13 @@ class Open_JSON():
                 # Show All Files (*)
                 return True
 
-
         def options_pane_build_fn(selected_items):
             with ui.CollapsableFrame("Reference Options"):
                 with ui.HStack(height=0, spacing=2):
                     ui.Label("Prim Path", width=0)
             return True
 
-                # For JSON Files
-
+        # For JSON Files
         def open_file_dialog_json():
             item_filters = [".json"]
             item_filter_options_description = ["JSON Files (*.json)"]
@@ -52,7 +48,6 @@ class Open_JSON():
 
             dialog.show()
 
-
         def on_click_open_json(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
             dialog.hide()
             dirname = dirname.strip()
@@ -60,7 +55,6 @@ class Open_JSON():
                 dirname += "/"
             fullpath = f"{dirname}{filename}"
             path_field_json.model.set_value(fullpath)
-
        
         def add_ref_to_scene(ref_scene_path, ref_path_in_scene, trans_x, trans_y, trans_z, rot_x, rot_y, rot_z):
             stage = omni.usd.get_context().get_stage()
@@ -103,22 +97,6 @@ class Open_JSON():
             bbox = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
             return np.array([bbox[0][0], bbox[0][1], bbox[0][2]]), np.array([bbox[1][0], bbox[1][1], bbox[1][2]])
 
-
-        # def Lock_all_prims():
-        #     # # Lock prim
-        #     stage = omni.usd.get_context().get_stage()
-        #     # Iterate over /World/Scope
-        #     prim_path = Sdf.Path("/World/Scope")
-        #     prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
-        #     if prim.IsValid():
-        #         for p in prim.GetAllChildren():
-        #             if p.IsValid():
-        #                 omni.kit.commands.execute('LockSpecs',
-        #                 spec_paths=[Sdf.Path(p.GetPrimPath())],
-        #                 hierarchy=False)
-
-
-
         def read_json():
             json_path = path_field_json.model.get_value_as_string()
             if json_path == "":
@@ -137,10 +115,7 @@ class Open_JSON():
                     # get the center 
                     ref_name = f"/World/Scope/{data[i]['name']}"
                     add_ref_to_scene(data[i]['asset_path'], ref_name, data[i]['centroid']['x'], data[i]['centroid']['y'], data[i]['centroid']['z'], data[i]['rotations']['x'], data[i]['rotations']['y'], data[i]['rotations']['z'])
-                    # unlock if it was locked
-                    omni.kit.commands.execute('UnlockSpecs',
-                        spec_paths=[Sdf.Path(ref_name)],
-                        hierarchy=False)
+                   
                     c_min, c_max = for_center(ref_name)
                     center = (c_min + c_max)/2
                     set_at_x = center[0] - data[i]['centroid']['x']
@@ -156,15 +131,11 @@ class Open_JSON():
                 # Closing file
                 f.close()
 
-
-        
         with ui.VStack():
             with ui.HStack():  
                 path_field_json = ui.StringField()
                 ui.Button("Browse", clicked_fn=open_file_dialog_json)
                 ui.Button("Load", clicked_fn=read_json)
-                # ui.Button("Lock_all_prims", clicked_fn=Lock_all_prims)
             with ui.Frame():
                 validation_load = ui.Label("")
-            # ui.Button("Open JSON", height=ui.Pixel(10), clicked_fn=open_json)
 
