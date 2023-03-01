@@ -25,8 +25,8 @@ Note that in our case, the directory path should end with `aipipeline-pointcloud
 
 **Load PC section:**
 
-- Browse a scene of type .ply
-- Load point clouds displayed in the scene
+- Browse a scene of type `.ply`
+- Load point clouds in the scene
 
 <img src="./data/repo-data/Load_PC.gif">
 
@@ -35,9 +35,9 @@ Note that in our case, the directory path should end with `aipipeline-pointcloud
 - Browse a directory that contain USD files.
 - Buttons will be displayed if there is USD files in the directory and set the button name as per the file name.
 - There is 3 Buttons to use when placing an object:
-`Done` clicked after placing a prim in order to place another one.
-`Undo` if you wish to unplace the object. Doesn't work after clicking `Done` button, you will need to delete object from stage.
-`Reset` if you want to unplace all the prims that you have set in your scene
+    - `Done` clicked after placing a prim in order to place another one.
+    - `Undo` if you wish to unplace the object. Doesn't work after clicking `Done` button, you will need to delete object from stage.
+    - `Reset` if you want to unplace all the prims that you have set in your scene
 - Object will be created at the perspective camera's location
 
 <img src = "./data/repo-data/PC_Annotation.gif">
@@ -56,19 +56,23 @@ Note that in our case, the directory path should end with `aipipeline-pointcloud
 
 **The Parent Prim Checkbox:**
 
-- This is a normal checkbox that is advised to let it on when using this extension since it helps you in always selecting the parent prim of a USD File object.
+- This is a normal checkbox located at the bottom left of the window. It is advised to let it checked when using this extension since it helps you always in selecting the parent prim of a USD File object.
 - If you click on the object in the scene, instead of getting a child prim of the object and move its location, you will always get the toppest prim.
 
-# Note for USD Files
+# Be Aware of:
 
 - Any change in the child prims of an object will not be saved in the json file. **That's why you should always select the parent prim of an object.**
 - Your USD files should be named as per the object that is present in their scene.
-- **The top parent prim of your object should always has a default translate, rotate of 0.**
-- Each USD File contain one object of a single type or class.
-**ex**: car.usd file has one object car that is located at Translate(0, 0, 0) with Rotation(0, 0, 0)
-- Best practice is to save all your assets in a same directory
 
-# Note
+<img src = "./data/repo-data/USD_files.png">
+
+- **The top parent prim of your object should always has a default translate, rotate of 0.**
+
+<img src = "./data/repo-data/asset_dolly.png">
+
+- Each USD File contain one object of a single type or class which is referenced to a scene.usdc file.
+    - **ex**: car.usd file has one object car that is located at Translate(0, 0, 0) with Rotation(0, 0, 0)
+- Best practice is to save all your assets in a same directory
 - You can see your objects added in the `Stage` window inside the `/World/Scope` folder.
 - In case you turned off the checkbox, make sure that you're always selecting the parent prim when relocating the object **(Not Recommended)**
 - After you have finished your work with the extension, you can turn off the checkbox.
