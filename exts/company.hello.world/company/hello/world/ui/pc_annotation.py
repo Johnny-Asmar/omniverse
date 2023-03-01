@@ -10,46 +10,16 @@ import json
 from builtins import max
 import numpy as np
 import carb
+import omni.usd
 
-class PC_Annotation():
+
+class PC_Annotation(ui.scene.ClickGesture):
     def __init__(self, dir_path, set_dir_path, refresh, **kwargs):
         super().__init__()
         self.created_prims = ""
         self.dir_path = dir_path
         self.set_dir_path = set_dir_path
         self.refresh  = refresh
-        self._input = carb.input.acquire_input_interface()
-    #     self._submouse = self._input.subscribe_to_input_events(self._on_input_event, order=0)
-
-
-
-    # def _on_global_mouse_event(self, event, *_):
-    #     # We care only mouse down
-    #     while True:
-    #         if event.type == carb.input.MouseEventType.LEFT_BUTTON_DOWN:
-    #             selected_paths = self._usd_context.get_selection().get_selected_prim_paths()
-    #             if len(selected_paths) > 0:
-    #                 parent = self.stage.GetPrimAtPath(selected_paths[0])
-    #                 prim_to_select = parent
-    #                 while parent:
-    #                     if parent.GetName() == "ParentPrimExample":
-    #                         prim_to_select = parent
-    #                         break
-    #                     parent = parent.GetParent()
-    #                 self.select_prim(prim_to_select)
-    #             break
-    #             return True
-
-    def _on_input_event(self, event, *_):
-            if event.deviceType == carb.input.DeviceType.MOUSE:
-                print("hi")
-                # return self._on_global_mouse_event(event.event)
-            else:
-                print("hi")
-                
-                return True
-
-    
 
     def build_ui(self):
 
@@ -74,7 +44,6 @@ class PC_Annotation():
             prop_name = "xformOp:rotateXYZ"
             rotation = prim.GetAttribute(prop_name).Get()
             return translate, rotation
-
 
         def compute_path_bbox(prim_path):
             bbox = omni.usd.get_context().compute_path_world_bounding_box(prim_path)
@@ -101,15 +70,13 @@ class PC_Annotation():
                 # Show All Files (*)
                 return True
 
-
         def options_pane_build_fn(selected_items):
             with ui.CollapsableFrame("Reference Options"):
                 with ui.HStack(height=0, spacing=2):
                     ui.Label("Prim Path", width=0)
             return True
 
-                # For JSON Files
-
+        # For JSON Files
         def open_file_dialog_json():
             item_filters = [".json"]
             item_filter_options_description = ["JSON Files (*.json)"]
@@ -125,7 +92,6 @@ class PC_Annotation():
 
             dialog.show()
 
-
         def on_click_open_json(dialog: FilePickerDialog, filename: str, dirname: str, path_field_json: ui.StringField):
             dialog.hide()
             dirname = dirname.strip()
@@ -138,7 +104,6 @@ class PC_Annotation():
         def open_dir_dialog_usd():
             item_filters = [".usd"]
             item_filter_options_description = ["Directories with usds(*.usd)"]
-
             dialog = FilePickerDialog(
                 "Demo Filepicker",
                 apply_button_label="Open",
@@ -147,7 +112,6 @@ class PC_Annotation():
                 item_filter_fn=lambda item: on_filter_item(dialog, item, item_filters),
                 options_pane_build_fn=options_pane_build_fn,
             )
-
             dialog.show()
 
         def on_click_open_usd(dialog: FilePickerDialog, filename: str, dirname: str, dir_path_field: ui.StringField):
@@ -158,7 +122,6 @@ class PC_Annotation():
             fullpath = f"{dirname}{filename}"
             self.dir_path_field.model.set_value(fullpath)
             self.refresh()
-
 
         # Write bounding box into a json file
         def save_bb():
@@ -178,30 +141,20 @@ class PC_Annotation():
                 prim: Usd.Prim = stage.GetPrimAtPath(prim_path)
                 for p in prim.GetAllChildren():
                     name = get_name(str(p.GetPrimPath()))
-
                     translate, rotation = get_transfRot(str(p.GetPrimPath()))
                     rot_x = rotation[0]
                     rot_y = rotation[1]
                     rot_z = rotation[2]
                     # Set Rotate to 0 when getting widt, height and depth
                     UsdGeom.XformCommonAPI(p).SetRotate((0, 0, 0))
-
                     width, height, depth = compute_path_bbox(str(p.GetPrimPath()))
-
                     # Set back oriiginal rotation to get the center
-
                     UsdGeom.XformCommonAPI(p).SetRotate((rot_x, rot_y, rot_z))
                     c_min, c_max = for_center(str(p.GetPrimPath()))
-
                     center = (c_min + c_max)/2
-
-                    
                     # Get Asset_path
                     asset_path = p.GetAttribute('asset_path').Get()
-
-                    
                     data = Prim_Object(name, center[0], center[1], center[2], rot_x, rot_y, rot_z, width, height, depth, asset_path)
-                    
                     json_data = json.dumps(data, default=lambda o: o.__dict__)
                     json_format = json.loads(json_data)
                     list_of_prims.append(json_format)
@@ -227,10 +180,8 @@ class PC_Annotation():
                             objects.append(x.partition('.')[0])
             return objects
 
-
         def add_ref_to_scene(ref_scene_path: str, ref_path_in_scene: str):
             from scipy.spatial.transform import Rotation as R
-            
             stage = omni.usd.get_context().get_stage()
             ref_prim = stage.OverridePrim(ref_path_in_scene)
             ref_prim.GetReferences().AddReference(ref_scene_path)
@@ -240,7 +191,6 @@ class PC_Annotation():
                 prim=ref_prim,
                 attr_name=attr_name,
                 attr_type=Sdf.ValueTypeNames.String,
-
             )
             prim_path = Sdf.Path(ref_path_in_scene)
             prev_value = ref_prim.GetAttribute(attr_name)
@@ -255,7 +205,6 @@ class PC_Annotation():
             UsdGeom.XformCommonAPI(ref_prim).SetTranslate((trans[0], trans[1], trans[2]))
             UsdGeom.XformCommonAPI(ref_prim).SetRotate((0, 0, 0))
             UsdGeom.XformCommonAPI(ref_prim).SetScale((1, 1, 1))
-
 
         def create_prim(button):
             validation_saving.text = ""
@@ -277,24 +226,12 @@ class PC_Annotation():
                 idx = min(filter(lambda e: e not in taken_idx, range(max(taken_idx) + 2 if len(taken_idx) > 0 else 1)))
                 ref_name = f"/World/Scope/{prim_name}_{idx}"
                 add_ref_to_scene(asset_path, ref_name)
-                # unlock if it was locked
-                omni.kit.commands.execute('UnlockSpecs',
-                    spec_paths=[Sdf.Path(ref_name)],
-                    hierarchy=False)
+                
                 self.created_prims = ref_name
-                # Lock all child_prims of the created prim
-                prim_created_path = Sdf.Path(ref_name)
-                prim_created: Usd.Prim = stage.GetPrimAtPath(prim_created_path)
-                if prim_created.IsValid():
-                    for p in prim_created.GetAllChildren():
-                        if p.IsValid():
-                            omni.kit.commands.execute('LockSpecs',
-                            spec_paths=[Sdf.Path(str(p.GetPrimPath()))],
-                            hierarchy=True)
+                
             else:
                 validation.text = "One Object already created"
                 validation_saving.text = ""
-
 
         def undo_prim():
             validation_saving.text = ""
@@ -309,13 +246,9 @@ class PC_Annotation():
             validation_saving.text = ""
             if self.created_prims != "":
                 validation.text = ""
-                omni.kit.commands.execute('LockSpecs',
-                spec_paths=[Sdf.Path(self.created_prims)],
-                hierarchy=False)
                 self.created_prims =  ""
             else:
                 validation.text = "Select an object!"
-
 
         def reset_list():
             # Delete prims from scene
@@ -344,15 +277,6 @@ class PC_Annotation():
                 prim_path=None,
                 attributes={},
                 select_new_prim=True)
-
-        
-
-
-
-
-
-        
-
 
         with ui.VStack():
             with ui.HStack(height=10):
